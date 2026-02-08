@@ -5,7 +5,7 @@
 <title>お題生成機</title>
 
 <style>
-  body {
+body {
   background: radial-gradient(circle at top, #222 0%, #000 70%);
   font-family: "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif;
   display: flex;
@@ -23,42 +23,20 @@
   box-shadow: 0 0 30px rgba(201,162,77,0.6);
   width: 90%;
   max-width: 700px;
-  height: 70vh;              /* ← 高さ固定 */
+  height: 70vh;
   display: flex;
-  flex-direction: column;    /* 縦並び */
+  flex-direction: column;
 }
 
 h1 {
   color: #c9a24d;
   font-size: 40px;
-  margin-bottom: 30px;
+  margin-bottom: 20px;
   letter-spacing: 2px;
+  text-align: center;
 }
 
-button {
-  font-size: 40px;
-  padding: 50px 48px;
-  border-radius: 6px;          /* 角ばり */
-  border: 3px solid #ffffff;   /* 白い枠 */
-  background: transparent;     /* 中は透過＝黒背景 */
-  color: #ffffff;
-  cursor: pointer;
-  letter-spacing: 3px;
-  font-weight: bold;
-  transition: all 0.15s ease;
-}
-
-button:active {
-  background: #ffffff;
-  color: #000000;
-  transform: translateY(2px);
-}
-
-  button:hover {
-  background: rgba(255,255,255,0.1);
-}
-
-  @keyframes odaiPop {
+@keyframes odaiPop {
   0% {
     transform: scale(2.5);
     opacity: 0;
@@ -87,43 +65,66 @@ button:active {
     0 3px 0 #000,
     0 6px 10px rgba(0,0,0,0.8);
 
-  overflow-y: auto; /* ← これを足す */
-  animation: odaiPop 0.6s ease-out;
+  overflow-y: auto;
+}
+
+#swipeArea {
+  padding-top: 20px;
+  padding-bottom: 10px;
+  text-align: center;
+  user-select: none;
+}
+
+#swipeBar {
+  width: 90px;
+  height: 6px;
+  background: #ffffff;
+  margin: 0 auto 12px;
+  opacity: 0.8;
+}
+
+#swipeText {
+  font-size: 14px;
+  color: rgba(255,255,255,0.7);
+  letter-spacing: 2px;
 }
 </style>
-
 </head>
+
 <body>
 
 <div class="card">
   <h1>お題生成機</h1>
-  <p id="odai"></p>
-  <button onclick="showOdai()">お題を出す</button>
+  <p id="odai">上にスワイプ</p>
+
+  <div id="swipeArea">
+    <div id="swipeBar"></div>
+    <div id="swipeText">上にスワイプしてお題シャッフル</div>
+  </div>
 </div>
 
 <script>
-// ▼ あなたのスプレッドシートIDを使ったCSV URL
+// ▼ GoogleスプレッドシートCSV
 const csvURL =
   "https://docs.google.com/spreadsheets/d/1OYhiZu4bU78u5CtmOkgMgp05vxZig2rdCcreBv0Pr3M/export?format=csv";
 
 let odaiList = [];
 
-// CSVを読み込む
+// CSV読み込み
 fetch(csvURL)
   .then(res => res.text())
   .then(text => {
     odaiList = text
-      .split("\n")        // 行ごと
-      .slice(2)           // ← 3行目から（B3〜）
+      .split("\n")
+      .slice(2)       // B3から
       .map(line => {
         const cols = line.split(",");
-        return cols[1];   // ← B列
+        return cols[1];
       })
       .filter(v => v && v.trim() !== "");
   });
 
-// ボタンを押したとき
-// ボタンを押したとき
+// お題表示
 function showOdai() {
   const odai = document.getElementById("odai");
 
@@ -135,14 +136,33 @@ function showOdai() {
 
   const r = Math.floor(Math.random() * odaiList.length);
 
-  // アニメーションをリセット
   odai.style.animation = "none";
-  odai.offsetHeight; // ← これがないと2回目以降動かない
+  odai.offsetHeight; // アニメ再起動用
 
-  // お題を入れてアニメーション再生
   odai.textContent = odaiList[r];
   odai.style.animation = "odaiPop 0.6s ease-out";
 }
+
+// ▼ スワイプ判定
+let startY = null;
+const swipeArea = document.getElementById("swipeArea");
+
+swipeArea.addEventListener("touchstart", (e) => {
+  startY = e.touches[0].clientY;
+});
+
+swipeArea.addEventListener("touchend", (e) => {
+  if (startY === null) return;
+
+  const endY = e.changedTouches[0].clientY;
+  const diff = startY - endY;
+
+  if (diff > 50) {
+    showOdai();
+  }
+
+  startY = null;
+});
 </script>
 
 </body>
