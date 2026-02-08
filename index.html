@@ -34,14 +34,15 @@ h1 {
 }
 
 button {
-  font-size: 60px;/*文字のデカさ*/
+  font-size: 75px;
   padding: 16px 48px;
-  border-radius: 50px;
+  border-radius: 6px;   /* ← ほぼ四角 */
   border: none;
   background: linear-gradient(180deg, #ff3b3b, #b30000);
   color: white;
   cursor: pointer;
   box-shadow: 0 6px 0 #7a0000;
+  letter-spacing: 2px;
 }
 
 button:active {
@@ -50,14 +51,12 @@ button:active {
 }
 
 #odai {
-  margin-top: 50px;
-  font-size: 70px;/*文字のデカさ*/
+  margin-top: 20px;
+  margin-bottom: 60px;  /* ← ここ追加 */
+  font-size: 75px;
   font-weight: bold;
   line-height: 1.6;
   color: #fff;
-  text-shadow:
-    0 3px 0 #000,
-    0 6px 10px rgba(0,0,0,0.8);
 }
 </style>
 
@@ -66,8 +65,8 @@ button:active {
 
 <div class="card">
   <h1>お題生成機</h1>
-  <button onclick="showOdai()">お題を出す</button>
   <p id="odai"></p>
+  <button onclick="showOdai()">お題を出す</button>
 </div>
 
 <script>
