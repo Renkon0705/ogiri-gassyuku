@@ -52,6 +52,20 @@ button:active {
   transform: translateY(6px);
 }
 
+  @keyframes odaiPop {
+  0% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(0.9);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
 #odai {
   flex: 1;
   display: flex;
@@ -68,6 +82,7 @@ button:active {
     0 6px 10px rgba(0,0,0,0.8);
 
   overflow-y: auto; /* ← これを足す */
+  animation: odaiPop 0.6s ease-out;
 }
 </style>
 
@@ -102,13 +117,25 @@ fetch(csvURL)
   });
 
 // ボタンを押したとき
+// ボタンを押したとき
 function showOdai() {
+  const odai = document.getElementById("odai");
+
   if (odaiList.length === 0) {
-    document.getElementById("odai").textContent = "読み込み中…";
+    odai.textContent = "読み込み中…";
+    odai.style.animation = "odaiPop 0.4s ease-out";
     return;
   }
+
   const r = Math.floor(Math.random() * odaiList.length);
-  document.getElementById("odai").textContent = odaiList[r];
+
+  // アニメーションをリセット
+  odai.style.animation = "none";
+  odai.offsetHeight; // ← これがないと2回目以降動かない
+
+  // お題を入れてアニメーション再生
+  odai.textContent = odaiList[r];
+  odai.style.animation = "odaiPop 0.6s ease-out";
 }
 </script>
 
