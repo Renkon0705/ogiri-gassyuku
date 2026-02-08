@@ -2,6 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>お題生成機</title>
 
 <style>
@@ -13,11 +14,12 @@ body {
   align-items: center;
   height: 100vh;
   margin: 0;
+  overflow: hidden;
 }
 
 .card {
   background: linear-gradient(180deg, #111, #000);
-  padding: 50px 60px;
+  padding: 40px;
   border-radius: 20px;
   border: 4px solid #c9a24d;
   box-shadow: 0 0 30px rgba(201,162,77,0.6);
@@ -30,24 +32,16 @@ body {
 
 h1 {
   color: #c9a24d;
-  font-size: 40px;
+  font-size: 36px;
   margin-bottom: 20px;
-  letter-spacing: 2px;
   text-align: center;
+  letter-spacing: 2px;
 }
 
 @keyframes odaiPop {
-  0% {
-    transform: scale(2.5);
-    opacity: 0;
-  }
-  60% {
-    transform: scale(0.7);
-    opacity: 1;
-  }
-  100% {
-    transform: scale(1);
-  }
+  0% { transform: scale(2.5); opacity: 0; }
+  60% { transform: scale(0.7); opacity: 1; }
+  100% { transform: scale(1); }
 }
 
 #odai {
@@ -56,20 +50,14 @@ h1 {
   align-items: center;
   justify-content: center;
   text-align: center;
-
-  font-size: 42px;
+  font-size: 40px;
   font-weight: bold;
   line-height: 1.6;
   color: #fff;
   text-shadow:
     0 3px 0 #000,
     0 6px 10px rgba(0,0,0,0.8);
-
   overflow-y: auto;
-}
-
-#swipeArea {
-  margin-top: 20px;
 }
 
 #swipeTrack {
@@ -77,7 +65,8 @@ h1 {
   height: 70px;
   border: 2px solid rgba(255,255,255,0.6);
   border-radius: 40px;
-  overflow: hidden;
+  margin-top: 20px;
+  touch-action: none;
 }
 
 #swipeLabel {
@@ -86,7 +75,7 @@ h1 {
   height: 100%;
   line-height: 70px;
   text-align: center;
-  color: rgba(255,255,255,0.7);
+  color: rgba(255,255,255,0.6);
   font-size: 14px;
   letter-spacing: 2px;
   pointer-events: none;
@@ -98,29 +87,15 @@ h1 {
   top: 5px;
   width: 60px;
   height: 60px;
-  background: #ffffff;
-  color: #000;
+  background: #fff;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 28px;
+  font-size: 26px;
   font-weight: bold;
+  color: #000;
   touch-action: none;
-}
-
-#swipeBar {
-  width: 90px;
-  height: 6px;
-  background: #ffffff;
-  margin: 0 auto 12px;
-  opacity: 0.8;
-}
-
-#swipeText {
-  font-size: 14px;
-  color: rgba(255,255,255,0.7);
-  letter-spacing: 2px;
 }
 </style>
 </head>
@@ -129,9 +104,8 @@ h1 {
 
 <div class="card">
   <h1>お題生成機</h1>
-  <p id="odai">上にスワイプ</p>
+  <div id="odai">右にスワイプ</div>
 
-  <div id="swipeArea">
   <div id="swipeTrack">
     <div id="swipeKnob">▶</div>
     <div id="swipeLabel">右にスライドしてお題表示</div>
@@ -139,7 +113,6 @@ h1 {
 </div>
 
 <script>
-// ▼ GoogleスプレッドシートCSV
 const csvURL =
   "https://docs.google.com/spreadsheets/d/1OYhiZu4bU78u5CtmOkgMgp05vxZig2rdCcreBv0Pr3M/export?format=csv";
 
@@ -151,79 +124,47 @@ fetch(csvURL)
   .then(text => {
     odaiList = text
       .split("\n")
-      .slice(2)       // B3から
-      .map(line => {
-        const cols = line.split(",");
-        return cols[1];
-      })
+      .slice(2)
+      .map(line => line.split(",")[1])
       .filter(v => v && v.trim() !== "");
   });
 
 // お題表示
 function showOdai() {
   const odai = document.getElementById("odai");
-
   if (odaiList.length === 0) {
     odai.textContent = "読み込み中…";
-    odai.style.animation = "odaiPop 0.4s ease-out";
     return;
   }
-
   const r = Math.floor(Math.random() * odaiList.length);
-
   odai.style.animation = "none";
-  odai.offsetHeight; // アニメ再起動用
-
+  odai.offsetHeight;
   odai.textContent = odaiList[r];
   odai.style.animation = "odaiPop 0.6s ease-out";
 }
 
-// ▼ スワイプ判定
-let startX = null;
-const swipeArea = document.getElementById("swipeArea");
-
-swipeArea.addEventListener("touchstart", (e) => {
-  startX = e.touches[0].clientX;
-});
-
-swipeArea.addEventListener("touchend", (e) => {
-  if (startX === null) return;
-
-  const endX = e.changedTouches[0].clientX;
-  const diff = endX - startX;
-
-  // 左 → 右 にスワイプしたら発動
-  if (diff > 60) {
-    showOdai();
-  }
-
-  startX = null;
-});
-
-  const knob = document.getElementById("swipeKnob");
+// スワイプ処理
+const knob = document.getElementById("swipeKnob");
 const track = document.getElementById("swipeTrack");
 
 let dragging = false;
 let startX = 0;
 let knobStartLeft = 0;
 
-knob.addEventListener("touchstart", (e) => {
+knob.addEventListener("touchstart", e => {
   e.preventDefault();
   dragging = true;
   startX = e.touches[0].clientX;
   knobStartLeft = knob.offsetLeft;
 }, { passive: false });
 
-document.addEventListener("touchmove", (e) => {
+document.addEventListener("touchmove", e => {
   if (!dragging) return;
-
-  e.preventDefault(); // ← これが命
+  e.preventDefault();
 
   const dx = e.touches[0].clientX - startX;
-  let newLeft = knobStartLeft + dx;
-
   const maxLeft = track.clientWidth - knob.clientWidth - 5;
-
+  let newLeft = knobStartLeft + dx;
   newLeft = Math.max(5, Math.min(newLeft, maxLeft));
   knob.style.left = newLeft + "px";
 }, { passive: false });
@@ -235,17 +176,11 @@ document.addEventListener("touchend", () => {
   const maxLeft = track.clientWidth - knob.clientWidth - 5;
   const currentLeft = knob.offsetLeft;
 
-  // ▶ 完走判定（8割以上）
-  if (currentLeft >= maxLeft * 0.8) {
+  if (currentLeft >= maxLeft * 0.85) {
     knob.style.left = maxLeft + "px";
     showOdai();
-
-    // 少し待ってから戻す
-    setTimeout(() => {
-      knob.style.left = "5px";
-    }, 700);
+    setTimeout(() => knob.style.left = "5px", 600);
   } else {
-    // 失敗 → 元に戻る
     knob.style.left = "5px";
   }
 });
