@@ -69,10 +69,44 @@ h1 {
 }
 
 #swipeArea {
-  padding-top: 20px;
-  padding-bottom: 10px;
+  margin-top: 20px;
+}
+
+#swipeTrack {
+  position: relative;
+  height: 70px;
+  border: 2px solid rgba(255,255,255,0.6);
+  border-radius: 40px;
+  overflow: hidden;
+}
+
+#swipeLabel {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  line-height: 70px;
   text-align: center;
-  user-select: none;
+  color: rgba(255,255,255,0.7);
+  font-size: 14px;
+  letter-spacing: 2px;
+  pointer-events: none;
+}
+
+#swipeKnob {
+  position: absolute;
+  left: 5px;
+  top: 5px;
+  width: 60px;
+  height: 60px;
+  background: #ffffff;
+  color: #000;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-weight: bold;
+  touch-action: none;
 }
 
 #swipeBar {
@@ -98,8 +132,9 @@ h1 {
   <p id="odai">上にスワイプ</p>
 
   <div id="swipeArea">
-    <div id="swipeBar"></div>
-    <div id="swipeText">上にスワイプしてお題シャッフル</div>
+  <div id="swipeTrack">
+    <div id="swipeKnob">▶</div>
+    <div id="swipeLabel">右にスライドしてお題表示</div>
   </div>
 </div>
 
@@ -163,6 +198,53 @@ swipeArea.addEventListener("touchend", (e) => {
   }
 
   startX = null;
+});
+
+  const knob = document.getElementById("swipeKnob");
+const track = document.getElementById("swipeTrack");
+
+let dragging = false;
+let startX = 0;
+let knobStartLeft = 0;
+
+knob.addEventListener("touchstart", (e) => {
+  dragging = true;
+  startX = e.touches[0].clientX;
+  knobStartLeft = knob.offsetLeft;
+});
+
+document.addEventListener("touchmove", (e) => {
+  if (!dragging) return;
+
+  const dx = e.touches[0].clientX - startX;
+  let newLeft = knobStartLeft + dx;
+
+  const maxLeft = track.clientWidth - knob.clientWidth - 5;
+
+  newLeft = Math.max(5, Math.min(newLeft, maxLeft));
+  knob.style.left = newLeft + "px";
+});
+
+document.addEventListener("touchend", () => {
+  if (!dragging) return;
+  dragging = false;
+
+  const maxLeft = track.clientWidth - knob.clientWidth - 5;
+  const currentLeft = knob.offsetLeft;
+
+  // ▶ 完走判定（8割以上）
+  if (currentLeft >= maxLeft * 0.8) {
+    knob.style.left = maxLeft + "px";
+    showOdai();
+
+    // 少し待ってから戻す
+    setTimeout(() => {
+      knob.style.left = "5px";
+    }, 700);
+  } else {
+    // 失敗 → 元に戻る
+    knob.style.left = "5px";
+  }
 });
 </script>
 
