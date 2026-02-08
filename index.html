@@ -1,26 +1,53 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>大喜利お題メーカー</title>
+
+<style>
+  body {
+    text-align: center;
+    font-size: 28px;
+    margin-top: 80px;
+    font-family: sans-serif;
+  }
+  button {
+    font-size: 28px;
+    padding: 12px 32px;
+  }
+</style>
+
+</head>
+<body>
+
+<h1>大喜利お題メーカー</h1>
+
+<button onclick="showOdai()">お題を出す</button>
+
+<p id="odai"></p>
+
 <script>
-const sheetURL =
-  "https://docs.google.com/spreadsheets/d/1OYhiZu4bU78u5CtmOkgMgp05vxZig2rdCcreBv0Pr3M/gviz/tq?tqx=out:json";
+// ▼ あなたのスプレッドシートIDを使ったCSV URL
+const csvURL =
+  "https://docs.google.com/spreadsheets/d/1OYhiZu4bU78u5CtmOkgMgp05vxZig2rdCcreBv0Pr3M/export?format=csv";
 
 let odaiList = [];
 
-fetch(sheetURL)
+// CSVを読み込む
+fetch(csvURL)
   .then(res => res.text())
   .then(text => {
-    const jsonText = text.match(/google.visualization.Query.setResponse\\((.*)\\);/s)[1];
-    const json = JSON.parse(jsonText);
-
-    // B列（1）、3行目以降
-    odaiList = json.table.rows
-      .slice(2)
-      .map(r => r.c[1]?.v)
-      .filter(v => v);
-  })
-  .catch(e => {
-    document.getElementById("odai").textContent = "読み込み失敗";
-    console.error(e);
+    odaiList = text
+      .split("\n")        // 行ごと
+      .slice(2)           // ← 3行目から（B3〜）
+      .map(line => {
+        const cols = line.split(",");
+        return cols[1];   // ← B列
+      })
+      .filter(v => v && v.trim() !== "");
   });
 
+// ボタンを押したとき
 function showOdai() {
   if (odaiList.length === 0) {
     document.getElementById("odai").textContent = "読み込み中…";
@@ -30,3 +57,6 @@ function showOdai() {
   document.getElementById("odai").textContent = odaiList[r];
 }
 </script>
+
+</body>
+</html>
