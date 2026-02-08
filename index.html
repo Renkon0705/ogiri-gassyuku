@@ -7,13 +7,18 @@ let odaiList = [];
 fetch(sheetURL)
   .then(res => res.text())
   .then(text => {
-    const json = JSON.parse(text.substring(47).slice(0, -2));
+    const jsonText = text.match(/google.visualization.Query.setResponse\\((.*)\\);/s)[1];
+    const json = JSON.parse(jsonText);
 
-    // B列（index 1）、3行目以降（index 2〜）
+    // B列（1）、3行目以降
     odaiList = json.table.rows
-      .slice(2) // ← 3行目から
-      .map(r => r.c[1]?.v) // ← B列
+      .slice(2)
+      .map(r => r.c[1]?.v)
       .filter(v => v);
+  })
+  .catch(e => {
+    document.getElementById("odai").textContent = "読み込み失敗";
+    console.error(e);
   });
 
 function showOdai() {
