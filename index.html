@@ -208,13 +208,16 @@ let startX = 0;
 let knobStartLeft = 0;
 
 knob.addEventListener("touchstart", (e) => {
+  e.preventDefault();
   dragging = true;
   startX = e.touches[0].clientX;
   knobStartLeft = knob.offsetLeft;
-});
+}, { passive: false });
 
 document.addEventListener("touchmove", (e) => {
   if (!dragging) return;
+
+  e.preventDefault(); // ← これが命
 
   const dx = e.touches[0].clientX - startX;
   let newLeft = knobStartLeft + dx;
@@ -223,7 +226,7 @@ document.addEventListener("touchmove", (e) => {
 
   newLeft = Math.max(5, Math.min(newLeft, maxLeft));
   knob.style.left = newLeft + "px";
-});
+}, { passive: false });
 
 document.addEventListener("touchend", () => {
   if (!dragging) return;
