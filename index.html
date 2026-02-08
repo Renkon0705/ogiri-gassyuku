@@ -6,25 +6,58 @@
 
 <style>
   body {
-    text-align: center;
-    font-size: 28px;
-    margin-top: 80px;
+    background: #f2f2f2;
     font-family: sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
   }
+
+  .card {
+    background: white;
+    padding: 40px 50px;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    text-align: center;
+    width: 90%;
+    max-width: 600px;
+  }
+
+  h1 {
+    margin-top: 0;
+  }
+
   button {
     font-size: 28px;
-    padding: 12px 32px;
+    padding: 14px 36px;
+    border-radius: 12px;
+    border: none;
+    background: #ff6b6b;
+    color: white;
+    cursor: pointer;
+  }
+
+  button:active {
+    transform: scale(0.96);
+  }
+
+  #odai {
+    margin-top: 30px;
+    font-size: 26px;
+    line-height: 1.5;
   }
 </style>
 
 </head>
 <body>
 
-<h1>大喜利お題メーカー</h1>
-
-<button onclick="showOdai()">お題を出す</button>
-
-<p id="odai"></p>
+<div class="card">
+  <h1>大喜利お題メーカー</h1>
+  <button onclick="showOdai()">お題を出す</button>
+  <p id="odai"></p>
+</div>
 
 <script>
 // ▼ あなたのスプレッドシートIDを使ったCSV URL
