@@ -88,8 +88,7 @@ h1 {
   width: 60px;
   height: 60px;
 
-  /* ▼ Liquid Glass */
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(255,255,255,0.25);
   backdrop-filter: blur(12px) saturate(180%);
   -webkit-backdrop-filter: blur(12px) saturate(180%);
 
@@ -110,8 +109,9 @@ h1 {
   color: rgba(255,255,255,0.9);
 
   touch-action: none;
+}
 
-  #swipeKnob .shine {
+#swipeKnob .shine {
   position: absolute;
   top: 6px;
   left: 10px;
@@ -122,7 +122,6 @@ h1 {
   filter: blur(6px);
   pointer-events: none;
 }
-}
 </style>
 </head>
 
@@ -130,15 +129,16 @@ h1 {
 
 <div class="card">
   <h1>お題生成機</h1>
+
   <div id="odai">右にスワイプ</div>
 
   <div id="swipeTrack">
-  <div id="swipeKnob">
-    ▶
-    <span class="shine"></span>
+    <div id="swipeKnob">
+      ▶
+      <span class="shine"></span>
+    </div>
+    <div id="swipeLabel">右にスライドしてお題表示</div>
   </div>
-  <div id="swipeLabel">右にスライドしてお題表示</div>
-</div>
 </div>
 
 <script>
@@ -172,7 +172,7 @@ function showOdai() {
   odai.style.animation = "odaiPop 0.6s ease-out";
 }
 
-// スワイプ処理
+// ===== スワイプ処理（タッチ＋マウス共通）=====
 const knob = document.getElementById("swipeKnob");
 const track = document.getElementById("swipeTrack");
 
@@ -180,39 +180,61 @@ let dragging = false;
 let startX = 0;
 let knobStartLeft = 0;
 
-knob.addEventListener("touchstart", e => {
-  e.preventDefault();
+function startDrag(x) {
   dragging = true;
-  startX = e.touches[0].clientX;
+  startX = x;
   knobStartLeft = knob.offsetLeft;
-}, { passive: false });
+}
 
-document.addEventListener("touchmove", e => {
+function moveDrag(x) {
   if (!dragging) return;
-  e.preventDefault();
-
-  const dx = e.touches[0].clientX - startX;
+  const dx = x - startX;
   const maxLeft = track.clientWidth - knob.clientWidth - 5;
   let newLeft = knobStartLeft + dx;
   newLeft = Math.max(5, Math.min(newLeft, maxLeft));
   knob.style.left = newLeft + "px";
-}, { passive: false });
+}
 
-document.addEventListener("touchend", () => {
+function endDrag() {
   if (!dragging) return;
   dragging = false;
 
   const maxLeft = track.clientWidth - knob.clientWidth - 5;
-  const currentLeft = knob.offsetLeft;
-
-  if (currentLeft >= maxLeft * 0.85) {
+  if (knob.offsetLeft >= maxLeft * 0.85) {
     knob.style.left = maxLeft + "px";
     showOdai();
     setTimeout(() => knob.style.left = "5px", 600);
   } else {
     knob.style.left = "5px";
   }
+}
+
+// タッチ
+knob.addEventListener("touchstart", e => {
+  e.preventDefault();
+  startDrag(e.touches[0].clientX);
+}, { passive: false });
+
+document.addEventListener("touchmove", e => {
+  if (!dragging) return;
+  e.preventDefault();
+  moveDrag(e.touches[0].clientX);
+}, { passive: false });
+
+document.addEventListener("touchend", endDrag);
+
+// マウス
+knob.addEventListener("mousedown", e => {
+  e.preventDefault();
+  startDrag(e.clientX);
 });
+
+document.addEventListener("mousemove", e => {
+  if (!dragging) return;
+  moveDrag(e.clientX);
+});
+
+document.addEventListener("mouseup", endDrag);
 </script>
 
 </body>
