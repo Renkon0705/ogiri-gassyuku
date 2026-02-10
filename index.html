@@ -18,41 +18,41 @@ body {
 
 .card {
   background: linear-gradient(180deg, #111, #000);
-  padding: 40px;
+  padding: 36px;
   border-radius: 20px;
   border: 4px solid #c9a24d;
   box-shadow: 0 0 30px rgba(201,162,77,0.6);
   width: 90%;
   max-width: 700px;
-  height: 75vh;
+  height: 80vh;
   display: flex;
   flex-direction: column;
 }
 
 h1 {
   color: #c9a24d;
-  font-size: 34px;
   text-align: center;
   margin-bottom: 10px;
 }
 
-#mode {
+.controls {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
-  gap: 12px;
+  gap: 8px;
   margin-bottom: 10px;
 }
 
-#mode button {
+.controls button {
   background: transparent;
   border: 2px solid #c9a24d;
   color: #c9a24d;
-  padding: 6px 14px;
-  font-size: 14px;
+  padding: 6px 12px;
+  font-size: 13px;
   cursor: pointer;
 }
 
-#mode button.active {
+.controls button.active {
   background: #c9a24d;
   color: #000;
 }
@@ -69,7 +69,7 @@ h1 {
   align-items: center;
   justify-content: center;
   text-align: center;
-  font-size: 40px;
+  font-size: 38px;
   font-weight: bold;
   color: #fff;
   line-height: 1.6;
@@ -81,7 +81,6 @@ h1 {
   height: 70px;
   border: 2px solid rgba(255,255,255,0.6);
   border-radius: 40px;
-  margin-top: 20px;
 }
 
 #swipeLabel {
@@ -137,10 +136,12 @@ h1 {
 <div class="card">
   <h1>お題生成機</h1>
 
-  <div id="mode">
+  <div class="controls">
     <button class="active" data-mode="both">両方</button>
     <button data-mode="sheet1">友達</button>
     <button data-mode="sheet2">みんな</button>
+    <button id="dupToggle">重複：ON</button>
+    <button id="dupReset">重複リセット</button>
   </div>
 
   <div id="odai">右にスワイプ</div>
@@ -153,90 +154,96 @@ h1 {
 
 <script>
 // ===== スプレッドシート =====
-const SPREADSHEET_ID = "1OYhiZu4bU78u5CtmOkgMgp05vxZig2rdCcreBv0Pr3M";
-const sheet1URL = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/export?format=csv&gid=155707948`;
-const sheet2URL = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/export?format=csv&gid=360588403`;
+const ID = "1OYhiZu4bU78u5CtmOkgMgp05vxZig2rdCcreBv0Pr3M";
+const url1 = `https://docs.google.com/spreadsheets/d/${ID}/export?format=csv&gid=155707948`;
+const url2 = `https://docs.google.com/spreadsheets/d/${ID}/export?format=csv&gid=360588403`;
 
-let list1 = [];
-let list2 = [];
+let list1 = [], list2 = [];
+let used = new Set();
 let mode = "both";
+let allowDup = true;
 
 // CSV読み込み
 function loadCSV(url) {
-  return fetch(url)
-    .then(r => r.text())
-    .then(t =>
-      t.split("\n").slice(2).map(l => l.split(",")[1]).filter(v => v)
-    );
+  return fetch(url).then(r => r.text()).then(t =>
+    t.split("\n").slice(2).map(l => l.split(",")[1]).filter(v => v)
+  );
 }
 
-Promise.all([loadCSV(sheet1URL), loadCSV(sheet2URL)])
+Promise.all([loadCSV(url1), loadCSV(url2)])
   .then(([a,b]) => { list1 = a; list2 = b; });
 
 // モード切替
-document.querySelectorAll("#mode button").forEach(btn => {
+document.querySelectorAll("[data-mode]").forEach(btn => {
   btn.onclick = () => {
-    document.querySelectorAll("#mode button").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll("[data-mode]").forEach(b => b.classList.remove("active"));
     btn.classList.add("active");
     mode = btn.dataset.mode;
   };
 });
 
+// 重複ON/OFF
+const dupBtn = document.getElementById("dupToggle");
+dupBtn.onclick = () => {
+  allowDup = !allowDup;
+  dupBtn.textContent = allowDup ? "重複：ON" : "重複：OFF";
+};
+
+// 重複リセット
+document.getElementById("dupReset").onclick = () => {
+  used.clear();
+  alert("重複記録をリセットしました");
+};
+
 // お題表示
 function showOdai() {
-  let pool = [];
-  if (mode === "sheet1") pool = list1;
-  else if (mode === "sheet2") pool = list2;
-  else pool = [...list1, ...list2];
+  let pool =
+    mode === "sheet1" ? list1 :
+    mode === "sheet2" ? list2 :
+    [...list1, ...list2];
 
+  if (!allowDup) pool = pool.filter(o => !used.has(o));
   if (pool.length === 0) return;
 
-  const odai = document.getElementById("odai");
-  odai.style.animation = "none";
-  odai.offsetHeight;
-  odai.textContent = pool[Math.floor(Math.random() * pool.length)];
-  odai.style.animation = "odaiPop 0.6s ease-out";
+  const odai = pool[Math.floor(Math.random() * pool.length)];
+  used.add(odai);
+
+  const el = document.getElementById("odai");
+  el.style.animation = "none";
+  el.offsetHeight;
+  el.textContent = odai;
+  el.style.animation = "odaiPop 0.6s ease-out";
 }
 
-// スワイプ（タッチ＋マウス）
+// スワイプ操作
 const knob = document.getElementById("swipeKnob");
 const track = document.getElementById("swipeTrack");
-let dragging = false, startX = 0, startLeft = 0;
+let dragging=false,startX=0,startL=0;
 
-function startDrag(x) {
-  dragging = true;
-  startX = x;
-  startLeft = knob.offsetLeft;
+function start(x){dragging=true;startX=x;startL=knob.offsetLeft;}
+function move(x){
+  if(!dragging)return;
+  const max=track.clientWidth-knob.clientWidth-5;
+  let p=startL+(x-startX);
+  knob.style.left=Math.max(5,Math.min(p,max))+"px";
 }
-
-function moveDrag(x) {
-  if (!dragging) return;
-  const max = track.clientWidth - knob.clientWidth - 5;
-  let pos = startLeft + (x - startX);
-  pos = Math.max(5, Math.min(pos, max));
-  knob.style.left = pos + "px";
-}
-
-function endDrag() {
-  if (!dragging) return;
-  dragging = false;
-  const max = track.clientWidth - knob.clientWidth - 5;
-  if (knob.offsetLeft > max * 0.85) {
-    knob.style.left = max + "px";
+function end(){
+  if(!dragging)return;
+  dragging=false;
+  const max=track.clientWidth-knob.clientWidth-5;
+  if(knob.offsetLeft>max*0.85){
+    knob.style.left=max+"px";
     showOdai();
-    setTimeout(() => knob.style.left = "5px", 600);
-  } else {
-    knob.style.left = "5px";
-  }
+    setTimeout(()=>knob.style.left="5px",600);
+  }else knob.style.left="5px";
 }
 
-knob.addEventListener("touchstart", e => startDrag(e.touches[0].clientX));
-document.addEventListener("touchmove", e => moveDrag(e.touches[0].clientX));
-document.addEventListener("touchend", endDrag);
-
-knob.addEventListener("mousedown", e => startDrag(e.clientX));
-document.addEventListener("mousemove", e => moveDrag(e.clientX));
-document.addEventListener("mouseup", endDrag);
+knob.addEventListener("touchstart",e=>start(e.touches[0].clientX));
+document.addEventListener("touchmove",e=>move(e.touches[0].clientX));
+document.addEventListener("touchend",end);
+knob.addEventListener("mousedown",e=>start(e.clientX));
+document.addEventListener("mousemove",e=>move(e.clientX));
+document.addEventListener("mouseup",end);
 </script>
 
 </body>
