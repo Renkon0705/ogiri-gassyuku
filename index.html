@@ -14,7 +14,6 @@ body {
   align-items: center;
   height: 100vh;
   margin: 0;
-  overflow: hidden;
 }
 
 .card {
@@ -32,10 +31,30 @@ body {
 
 h1 {
   color: #c9a24d;
-  font-size: 36px;
-  margin-bottom: 10px;
+  font-size: 34px;
   text-align: center;
-  letter-spacing: 2px;
+  margin-bottom: 10px;
+}
+
+#mode {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+#mode button {
+  background: transparent;
+  border: 2px solid #c9a24d;
+  color: #c9a24d;
+  padding: 6px 14px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+#mode button.active {
+  background: #c9a24d;
+  color: #000;
 }
 
 @keyframes odaiPop {
@@ -52,51 +71,17 @@ h1 {
   text-align: center;
   font-size: 40px;
   font-weight: bold;
+  color: #fff;
   line-height: 1.6;
-  color: #fff;
-  text-shadow:
-    0 3px 0 #000,
-    0 6px 10px rgba(0,0,0,0.8);
-  overflow-y: auto;
+  text-shadow: 0 3px 0 #000, 0 6px 10px rgba(0,0,0,0.8);
 }
 
-/* ===== 重複設定UI ===== */
-#controls {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 15px;
-  gap: 10px;
-}
-
-label {
-  color: #fff;
-  font-size: 14px;
-  cursor: pointer;
-}
-
-button {
-  background: transparent;
-  border: 1px solid rgba(255,255,255,0.6);
-  color: #fff;
-  padding: 6px 14px;
-  border-radius: 20px;
-  font-size: 13px;
-  cursor: pointer;
-}
-
-button:hover {
-  background: rgba(255,255,255,0.1);
-}
-
-/* ===== スワイプ ===== */
 #swipeTrack {
   position: relative;
   height: 70px;
   border: 2px solid rgba(255,255,255,0.6);
   border-radius: 40px;
-  margin-top: 10px;
-  touch-action: none;
+  margin-top: 20px;
 }
 
 #swipeLabel {
@@ -107,7 +92,6 @@ button:hover {
   text-align: center;
   color: rgba(255,255,255,0.6);
   font-size: 14px;
-  letter-spacing: 2px;
   pointer-events: none;
 }
 
@@ -129,9 +113,9 @@ button:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24px;
-  font-weight: bold;
-  color: rgba(255,255,255,0.9);
+  font-size: 22px;
+  color: #fff;
+  cursor: pointer;
   touch-action: none;
 }
 
@@ -144,7 +128,6 @@ button:hover {
   background: rgba(255,255,255,0.35);
   border-radius: 50%;
   filter: blur(6px);
-  pointer-events: none;
 }
 </style>
 </head>
@@ -154,12 +137,10 @@ button:hover {
 <div class="card">
   <h1>お題生成機</h1>
 
-  <div id="controls">
-    <label>
-      <input type="checkbox" id="noDuplicate">
-      重複なしモード
-    </label>
-    <button id="resetUsed">重複リセット</button>
+  <div id="mode">
+    <button class="active" data-mode="both">両方</button>
+    <button data-mode="sheet1">友達</button>
+    <button data-mode="sheet2">みんな</button>
   </div>
 
   <div id="odai">右にスワイプ</div>
@@ -171,87 +152,77 @@ button:hover {
 </div>
 
 <script>
-const csvURL =
-  "https://docs.google.com/spreadsheets/d/1OYhiZu4bU78u5CtmOkgMgp05vxZig2rdCcreBv0Pr3M/export?format=csv";
+// ===== スプレッドシート =====
+const SPREADSHEET_ID = "1OYhiZu4bU78u5CtmOkgMgp05vxZig2rdCcreBv0Pr3M";
+const sheet1URL = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/export?format=csv&gid=155707948`;
+const sheet2URL = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/export?format=csv&gid=360588403`;
 
-let odaiList = [];
-let usedIndexes = [];
+let list1 = [];
+let list2 = [];
+let mode = "both";
 
-fetch(csvURL)
-  .then(res => res.text())
-  .then(text => {
-    odaiList = text
-      .split("\n")
-      .slice(2)
-      .map(line => line.split(",")[1])
-      .filter(v => v && v.trim() !== "");
-  });
+// CSV読み込み
+function loadCSV(url) {
+  return fetch(url)
+    .then(r => r.text())
+    .then(t =>
+      t.split("\n").slice(2).map(l => l.split(",")[1]).filter(v => v)
+    );
+}
 
+Promise.all([loadCSV(sheet1URL), loadCSV(sheet2URL)])
+  .then(([a,b]) => { list1 = a; list2 = b; });
+
+// モード切替
+document.querySelectorAll("#mode button").forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll("#mode button").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    mode = btn.dataset.mode;
+  };
+});
+
+// お題表示
 function showOdai() {
+  let pool = [];
+  if (mode === "sheet1") pool = list1;
+  else if (mode === "sheet2") pool = list2;
+  else pool = [...list1, ...list2];
+
+  if (pool.length === 0) return;
+
   const odai = document.getElementById("odai");
-  const noDup = document.getElementById("noDuplicate").checked;
-
-  if (odaiList.length === 0) {
-    odai.textContent = "読み込み中…";
-    return;
-  }
-
-  let index;
-
-  if (noDup) {
-    if (usedIndexes.length >= odaiList.length) {
-      odai.textContent = "すべて出ました！\nリセットしてね";
-      return;
-    }
-    do {
-      index = Math.floor(Math.random() * odaiList.length);
-    } while (usedIndexes.includes(index));
-    usedIndexes.push(index);
-  } else {
-    index = Math.floor(Math.random() * odaiList.length);
-  }
-
   odai.style.animation = "none";
   odai.offsetHeight;
-  odai.textContent = odaiList[index];
+  odai.textContent = pool[Math.floor(Math.random() * pool.length)];
   odai.style.animation = "odaiPop 0.6s ease-out";
 }
 
-document.getElementById("resetUsed").onclick = () => {
-  usedIndexes = [];
-  document.getElementById("odai").textContent = "リセット完了";
-};
-
-/* ===== スワイプ処理 ===== */
+// スワイプ（タッチ＋マウス）
 const knob = document.getElementById("swipeKnob");
 const track = document.getElementById("swipeTrack");
-
-let dragging = false;
-let startX = 0;
-let knobStartLeft = 0;
+let dragging = false, startX = 0, startLeft = 0;
 
 function startDrag(x) {
   dragging = true;
   startX = x;
-  knobStartLeft = knob.offsetLeft;
+  startLeft = knob.offsetLeft;
 }
 
 function moveDrag(x) {
   if (!dragging) return;
-  const dx = x - startX;
-  const maxLeft = track.clientWidth - knob.clientWidth - 5;
-  let newLeft = knobStartLeft + dx;
-  newLeft = Math.max(5, Math.min(newLeft, maxLeft));
-  knob.style.left = newLeft + "px";
+  const max = track.clientWidth - knob.clientWidth - 5;
+  let pos = startLeft + (x - startX);
+  pos = Math.max(5, Math.min(pos, max));
+  knob.style.left = pos + "px";
 }
 
 function endDrag() {
   if (!dragging) return;
   dragging = false;
-  const maxLeft = track.clientWidth - knob.clientWidth - 5;
-
-  if (knob.offsetLeft >= maxLeft * 0.85) {
-    knob.style.left = maxLeft + "px";
+  const max = track.clientWidth - knob.clientWidth - 5;
+  if (knob.offsetLeft > max * 0.85) {
+    knob.style.left = max + "px";
     showOdai();
     setTimeout(() => knob.style.left = "5px", 600);
   } else {
@@ -259,29 +230,12 @@ function endDrag() {
   }
 }
 
-knob.addEventListener("touchstart", e => {
-  e.preventDefault();
-  startDrag(e.touches[0].clientX);
-}, { passive: false });
-
-document.addEventListener("touchmove", e => {
-  if (!dragging) return;
-  e.preventDefault();
-  moveDrag(e.touches[0].clientX);
-}, { passive: false });
-
+knob.addEventListener("touchstart", e => startDrag(e.touches[0].clientX));
+document.addEventListener("touchmove", e => moveDrag(e.touches[0].clientX));
 document.addEventListener("touchend", endDrag);
 
-knob.addEventListener("mousedown", e => {
-  e.preventDefault();
-  startDrag(e.clientX);
-});
-
-document.addEventListener("mousemove", e => {
-  if (!dragging) return;
-  moveDrag(e.clientX);
-});
-
+knob.addEventListener("mousedown", e => startDrag(e.clientX));
+document.addEventListener("mousemove", e => moveDrag(e.clientX));
 document.addEventListener("mouseup", endDrag);
 </script>
 
