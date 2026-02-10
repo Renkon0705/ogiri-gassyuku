@@ -40,7 +40,7 @@ h1 {
   flex-wrap: wrap;
   justify-content: center;
   gap: 8px;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .controls button {
@@ -74,6 +74,13 @@ h1 {
   color: #fff;
   line-height: 1.6;
   text-shadow: 0 3px 0 #000, 0 6px 10px rgba(0,0,0,0.8);
+}
+
+#remain {
+  text-align: center;
+  color: rgba(255,255,255,0.7);
+  font-size: 14px;
+  margin-bottom: 8px;
 }
 
 #swipeTrack {
@@ -138,13 +145,14 @@ h1 {
 
   <div class="controls">
     <button class="active" data-mode="both">両方</button>
-    <button data-mode="sheet1">精鋭お題</button>
-    <button data-mode="sheet2">パブリックお題</button>
+    <button data-mode="sheet1">友達</button>
+    <button data-mode="sheet2">みんな</button>
     <button id="dupToggle">重複：ON</button>
     <button id="dupReset">重複リセット</button>
   </div>
 
   <div id="odai">右にスワイプ</div>
+  <div id="remain"></div>
 
   <div id="swipeTrack">
     <div id="swipeKnob">▶<span class="shine"></span></div>
@@ -173,12 +181,23 @@ function loadCSV(url) {
 Promise.all([loadCSV(url1), loadCSV(url2)])
   .then(([a,b]) => { list1 = a; list2 = b; });
 
+// 残り数更新
+function updateRemain(pool) {
+  const el = document.getElementById("remain");
+  if (allowDup) {
+    el.textContent = "";
+  } else {
+    el.textContent = `残り ${pool.length} 問`;
+  }
+}
+
 // モード切替
 document.querySelectorAll("[data-mode]").forEach(btn => {
   btn.onclick = () => {
     document.querySelectorAll("[data-mode]").forEach(b => b.classList.remove("active"));
     btn.classList.add("active");
     mode = btn.dataset.mode;
+    updateRemain(getPool());
   };
 });
 
@@ -186,23 +205,31 @@ document.querySelectorAll("[data-mode]").forEach(btn => {
 const dupBtn = document.getElementById("dupToggle");
 dupBtn.onclick = () => {
   allowDup = !allowDup;
-  dupBtn.textContent = allowDup ? "重複：ON" : "重複：OFF";
+  dupBtn.textContent = allowDup ? "重複：許可" : "重複：禁止";
+  updateRemain(getPool());
 };
 
 // 重複リセット
 document.getElementById("dupReset").onclick = () => {
   used.clear();
+  updateRemain(getPool());
   alert("重複記録をリセットしました");
 };
 
-// お題表示
-function showOdai() {
+// プール取得
+function getPool() {
   let pool =
     mode === "sheet1" ? list1 :
     mode === "sheet2" ? list2 :
     [...list1, ...list2];
 
   if (!allowDup) pool = pool.filter(o => !used.has(o));
+  return pool;
+}
+
+// お題表示
+function showOdai() {
+  const pool = getPool();
   if (pool.length === 0) return;
 
   const odai = pool[Math.floor(Math.random() * pool.length)];
@@ -213,6 +240,8 @@ function showOdai() {
   el.offsetHeight;
   el.textContent = odai;
   el.style.animation = "odaiPop 0.6s ease-out";
+
+  updateRemain(getPool());
 }
 
 // スワイプ操作
