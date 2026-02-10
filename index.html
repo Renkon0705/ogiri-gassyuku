@@ -25,7 +25,7 @@ body {
   box-shadow: 0 0 30px rgba(201,162,77,0.6);
   width: 90%;
   max-width: 700px;
-  height: 70vh;
+  height: 75vh;
   display: flex;
   flex-direction: column;
 }
@@ -33,7 +33,7 @@ body {
 h1 {
   color: #c9a24d;
   font-size: 36px;
-  margin-bottom: 20px;
+  margin-bottom: 10px;
   text-align: center;
   letter-spacing: 2px;
 }
@@ -60,12 +60,42 @@ h1 {
   overflow-y: auto;
 }
 
+/* ===== 重複設定UI ===== */
+#controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  gap: 10px;
+}
+
+label {
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+button {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.6);
+  color: #fff;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+button:hover {
+  background: rgba(255,255,255,0.1);
+}
+
+/* ===== スワイプ ===== */
 #swipeTrack {
   position: relative;
   height: 70px;
   border: 2px solid rgba(255,255,255,0.6);
   border-radius: 40px;
-  margin-top: 20px;
+  margin-top: 10px;
   touch-action: none;
 }
 
@@ -87,27 +117,21 @@ h1 {
   top: 5px;
   width: 60px;
   height: 60px;
-
   background: rgba(255,255,255,0.25);
   backdrop-filter: blur(12px) saturate(180%);
   -webkit-backdrop-filter: blur(12px) saturate(180%);
-
   border-radius: 50%;
   border: 1px solid rgba(255,255,255,0.6);
-
   box-shadow:
     inset 0 1px 2px rgba(255,255,255,0.6),
     inset 0 -2px 4px rgba(0,0,0,0.2),
     0 8px 18px rgba(0,0,0,0.6);
-
   display: flex;
   align-items: center;
   justify-content: center;
-
   font-size: 24px;
   font-weight: bold;
   color: rgba(255,255,255,0.9);
-
   touch-action: none;
 }
 
@@ -130,13 +154,18 @@ h1 {
 <div class="card">
   <h1>お題生成機</h1>
 
+  <div id="controls">
+    <label>
+      <input type="checkbox" id="noDuplicate">
+      重複なしモード
+    </label>
+    <button id="resetUsed">重複リセット</button>
+  </div>
+
   <div id="odai">右にスワイプ</div>
 
   <div id="swipeTrack">
-    <div id="swipeKnob">
-      ▶
-      <span class="shine"></span>
-    </div>
+    <div id="swipeKnob">▶<span class="shine"></span></div>
     <div id="swipeLabel">右にスライドしてお題表示</div>
   </div>
 </div>
@@ -146,8 +175,8 @@ const csvURL =
   "https://docs.google.com/spreadsheets/d/1OYhiZu4bU78u5CtmOkgMgp05vxZig2rdCcreBv0Pr3M/export?format=csv";
 
 let odaiList = [];
+let usedIndexes = [];
 
-// CSV読み込み
 fetch(csvURL)
   .then(res => res.text())
   .then(text => {
@@ -158,21 +187,42 @@ fetch(csvURL)
       .filter(v => v && v.trim() !== "");
   });
 
-// お題表示
 function showOdai() {
   const odai = document.getElementById("odai");
+  const noDup = document.getElementById("noDuplicate").checked;
+
   if (odaiList.length === 0) {
     odai.textContent = "読み込み中…";
     return;
   }
-  const r = Math.floor(Math.random() * odaiList.length);
+
+  let index;
+
+  if (noDup) {
+    if (usedIndexes.length >= odaiList.length) {
+      odai.textContent = "すべて出ました！\nリセットしてね";
+      return;
+    }
+    do {
+      index = Math.floor(Math.random() * odaiList.length);
+    } while (usedIndexes.includes(index));
+    usedIndexes.push(index);
+  } else {
+    index = Math.floor(Math.random() * odaiList.length);
+  }
+
   odai.style.animation = "none";
   odai.offsetHeight;
-  odai.textContent = odaiList[r];
+  odai.textContent = odaiList[index];
   odai.style.animation = "odaiPop 0.6s ease-out";
 }
 
-// ===== スワイプ処理（タッチ＋マウス共通）=====
+document.getElementById("resetUsed").onclick = () => {
+  usedIndexes = [];
+  document.getElementById("odai").textContent = "リセット完了";
+};
+
+/* ===== スワイプ処理 ===== */
 const knob = document.getElementById("swipeKnob");
 const track = document.getElementById("swipeTrack");
 
@@ -198,8 +248,8 @@ function moveDrag(x) {
 function endDrag() {
   if (!dragging) return;
   dragging = false;
-
   const maxLeft = track.clientWidth - knob.clientWidth - 5;
+
   if (knob.offsetLeft >= maxLeft * 0.85) {
     knob.style.left = maxLeft + "px";
     showOdai();
@@ -209,7 +259,6 @@ function endDrag() {
   }
 }
 
-// タッチ
 knob.addEventListener("touchstart", e => {
   e.preventDefault();
   startDrag(e.touches[0].clientX);
@@ -223,7 +272,6 @@ document.addEventListener("touchmove", e => {
 
 document.addEventListener("touchend", endDrag);
 
-// マウス
 knob.addEventListener("mousedown", e => {
   e.preventDefault();
   startDrag(e.clientX);
